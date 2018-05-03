@@ -1,14 +1,15 @@
 #!/bin/sh
-''''[ -z $LOG ] && export LOG=/dev/stdout # '''
-''''which python2 >/dev/null && exec python2 -u "$0" "$@" >> $LOG 2>&1 # '''
-''''which python  >/dev/null && exec python  -u "$0" "$@" >> $LOG 2>&1 # '''
+''''which python2 >/dev/null && exec python2 "$0" "$@" # '''
+''''which python  >/dev/null && exec python  "$0" "$@" # '''
 
 # Copyright (C) 2014-2015 Nginx, Inc.
 
 import sys, os, signal, base64, ldap, Cookie, argparse
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
-#Listen = ('localhost', 8888)
+import yaml
+import re;
+#Listen = ('localhost', 12008)
 #Listen = "/tmp/auth.sock"    # Also uncomment lines in 'Requests are
                               # processed with UNIX sockets' section below
 
@@ -37,6 +38,9 @@ class AuthHandler(BaseHTTPRequestHandler):
 
     # Return True if request is processed and response sent, otherwise False
     # Set ctx['user'] and ctx['pass'] for authentication
+    def set_UserValidator(self, userValidator):
+        self.userValidator = userValidator
+
     def do_GET(self):
 
         ctx = self.ctx
@@ -50,8 +54,6 @@ class AuthHandler(BaseHTTPRequestHandler):
 
         ctx['action'] = 'performing authorization'
         auth_header = self.headers.get('Authorization')
-        auth_validgroup = self.headers.get('Auth-Valid-Group') or ''
-	self.log_message("auth_validgroup: %s" % auth_validgroup)
         auth_cookie = self.get_cookie(ctx['cookiename'])
 
         if auth_cookie != None and auth_cookie != '':
@@ -82,6 +84,13 @@ class AuthHandler(BaseHTTPRequestHandler):
 
         ctx['user'] = user
         ctx['pass'] = passwd
+        
+        x_auth_group = self.headers.get('X-LDAP-GROUP', '')
+        if x_auth_group == '':
+            pass
+        else:
+            if not self.userValidator.valid(x_auth_group, user):
+                return True 
 
         # Continue request processing
         return False
@@ -150,7 +159,6 @@ class LDAPAuthHandler(AuthHandler):
              # parameter      header         default
              'realm': ('X-Ldap-Realm', 'Restricted'),
              'url': ('X-Ldap-URL', None),
-             'starttls': ('X-Ldap-Starttls', 'false'),
              'basedn': ('X-Ldap-BaseDN', None),
              'template': ('X-Ldap-Template', '(cn=%(username)s)'),
              'binddn': ('X-Ldap-BindDN', ''),
@@ -186,29 +194,15 @@ class LDAPAuthHandler(AuthHandler):
         try:
             # check that uri and baseDn are set
             # either from cli or a request
-            if not ctx['url']:
+            if not ctx['url']: 
                 self.log_message('LDAP URL is not set!')
                 return
             if not ctx['basedn']:
                 self.log_message('LDAP baseDN is not set!')
-                return
+                return 
 
             ctx['action'] = 'initializing LDAP connection'
             ldap_obj = ldap.initialize(ctx['url']);
-
-            # Python-ldap module documentation advises to always
-            # explicitely set the LDAP version to use after running
-            # initialize() and recommends using LDAPv3. (LDAPv2 is
-            # deprecated since 2003 as per RFC3494)
-            #
-            # Also, the STARTTLS extension requires the
-            # use of LDAPv3 (RFC2830).
-            ldap_obj.protocol_version=ldap.VERSION3
-
-            # Establish a STARTTLS connection if required by the
-            # headers.
-            if ctx['starttls'] == 'true':
-                ldap_obj.start_tls_s()
 
             # See http://www.python-ldap.org/faq.shtml
             # uncomment, if required
@@ -257,49 +251,68 @@ def exit_handler(signal, frame):
             ex, value, trace = sys.exc_info()
             sys.stderr.write('Failed to remove socket "%s": %s\n' %
                              (Listen, str(value)))
-            sys.stderr.flush()
     sys.exit(0)
+
+
+class UserValidator():
+    def __init__(self):
+        self.groups = {}
+        with open("./nginx.ldap.auth.groups.yaml") as f:
+            groupInfo = yaml.load(f)
+        pattern = re.compile(r"\s{2,}")
+        for group, userLists in groupInfo.items():
+            if not self.groups.has_key(group):
+                self.groups[group] = [];
+                
+            for group2, userList in userLists.items():
+                userList = userList.strip()
+                userList = re.sub(pattern, " ", userList)
+                self.groups[group] += userList.split(" ")
+
+    def valid(self, group, user):
+    return self.groups.has_key(group) and user in self.groups[group] 
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="""Simple Nginx LDAP authentication helper.""")
     # Group for listen options:
     group = parser.add_argument_group("Listen options")
-    group.add_argument('--host',  metavar="hostname",
+    group.add_argument('--host',  metavar="hostname", 
         default="localhost", help="host to bind (Default: localhost)")
     group.add_argument('-p', '--port', metavar="port", type=int, 
-        default=15008, help="port to bind (Default: 15008)")
+        default=12008, help="port to bind (Default: 12008)")
     # ldap options:
     group = parser.add_argument_group(title="LDAP options")
     group.add_argument('-u', '--url', metavar="URL",
-        default="ldap://localhost:389",
+        default="ldap://localhost:389", 
         help=("LDAP URI to query (Default: ldap://localhost:389)"))
-    group.add_argument('-s', '--starttls', metavar="starttls",
-        default="false",
-        help=("Establish a STARTTLS protected session (Default: false)"))
     group.add_argument('-b', metavar="baseDn", dest="basedn", default='',
         help="LDAP base dn (Default: unset)")
     group.add_argument('-D', metavar="bindDn", dest="binddn", default='',
         help="LDAP bind DN (Default: anonymous)")
     group.add_argument('-w', metavar="passwd", dest="bindpw", default='',
         help="LDAP password for the bind DN (Default: unset)")
-    group.add_argument('-f', '--filter', metavar='filter',
-        default='(cn=%(username)s)',
+    group.add_argument('-f', '--filter', metavar='filter', 
+        default='(cn=%(username)s)', 
         help="LDAP filter (Default: cn=%%(username)s)")
     # http options:
     group = parser.add_argument_group(title="HTTP options")
-    group.add_argument('-R', '--realm', metavar='"Restricted Area"',
-        default="Restricted", help='HTTP auth realm (Default: "Restricted")')
-    group.add_argument('-c', '--cookie', metavar="cookiename",
+    group.add_argument('-R', '--realm', metavar='"Restricted Area"', 
+        default="Resticted", help='HTTP auth realm (Default: "Restricted")')
+    group.add_argument('-c', '--cookie', metavar="cookiename", 
         default="", help="HTTP cookie name to set in (Default: unset)")
 
     args = parser.parse_args()
-    global Listen
+
+    userValidator = UserValidator()
+    userValidator.set_UserValidator(userValidator)
+
+    global Listen 
     Listen = (args.host, args.port)
     auth_params = {
              'realm': ('X-Ldap-Realm', args.realm),
              'url': ('X-Ldap-URL', args.url),
-             'starttls': ('X-Ldap-Starttls', args.starttls),
              'basedn': ('X-Ldap-BaseDN', args.basedn),
              'template': ('X-Ldap-Template', args.filter),
              'binddn': ('X-Ldap-BindDN', args.binddn),
@@ -309,8 +322,4 @@ if __name__ == '__main__':
     LDAPAuthHandler.set_params(auth_params)
     server = AuthHTTPServer(Listen, LDAPAuthHandler)
     signal.signal(signal.SIGINT, exit_handler)
-    signal.signal(signal.SIGTERM, exit_handler)
-
-    sys.stdout.write("Start listening on %s:%d...\n" % Listen)
-    sys.stdout.flush()
     server.serve_forever()

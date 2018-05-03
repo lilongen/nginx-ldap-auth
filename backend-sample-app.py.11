@@ -12,7 +12,7 @@
 import sys, os, signal, base64, Cookie, cgi, urlparse
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
-Listen = ('localhost', 12000)
+Listen = ('localhost', 9000)
 
 import threading
 from SocketServer import ThreadingMixIn
@@ -46,8 +46,7 @@ class AppHandler(BaseHTTPRequestHandler):
             self.send_response(500)
             return
 
-        file_object = open('/opt/datav.utility.nginx_ldap_auth.ui/login.html', 'r')
-        #file_object = open('/opt/nginx-ldap-auth/login.html', 'r')
+        file_object = open('login.html', 'r')
         html=''
 	try:
 	     html = file_object.read( )
@@ -91,8 +90,7 @@ class AppHandler(BaseHTTPRequestHandler):
             #
             # WARNING WARNING WARNING
             enc = base64.b64encode(user + ':' + passwd)
-            self.send_header('Set-Cookie', 'nginxauth=' + enc + '; path=/; Domain=172.17.128.174')
-            #self.send_header('Set-Cookie', 'nginxauth=' + enc + '; path=/')
+            self.send_header('Set-Cookie', 'nginxauth=' + enc + '; httponly')
 
             self.send_header('Location', target)
             self.end_headers()
