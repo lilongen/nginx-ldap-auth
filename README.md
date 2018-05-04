@@ -1,4 +1,5 @@
-# forked from https://github.com/nginxinc/nginx-ldap-auth, add special group and memeber verfication support
+# forked from https://github.com/nginxinc/nginx-ldap-auth
+add user-defined group and memebers verfication support
 
 # nginx-ldap-auth
 
