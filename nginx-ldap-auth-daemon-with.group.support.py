@@ -36,11 +36,13 @@ class AuthHTTPServer(ThreadingMixIn, HTTPServer):
 
 class AuthHandler(BaseHTTPRequestHandler):
 
-    # Return True if request is processed and response sent, otherwise False
-    # Set ctx['user'] and ctx['pass'] for authentication
+
+    @classmethod
     def set_UserValidator(self, userValidator):
         self.userValidator = userValidator
 
+    # Return True if request is processed and response sent, otherwise False
+    # Set ctx['user'] and ctx['pass'] for authentication
     def do_GET(self):
 
         ctx = self.ctx
@@ -86,11 +88,13 @@ class AuthHandler(BaseHTTPRequestHandler):
         ctx['pass'] = passwd
         
         x_auth_group = self.headers.get('X-LDAP-GROUP', '')
+        self.log_message('X-LDAP-GROUP: %s', x_auth_group)
         if x_auth_group == '':
             pass
         else:
-            if not self.userValidator.valid(x_auth_group, user):
-                return True 
+            if not self.userValidator.valid(x_auth_group, ctx['user']):
+                self.auth_failed(ctx, 'X-LDAP-GROUP/user invalid!')
+                return True
 
         # Continue request processing
         return False
@@ -257,7 +261,7 @@ def exit_handler(signal, frame):
 class UserValidator():
     def __init__(self):
         self.groups = {}
-        with open("./nginx.ldap.auth.groups.yaml") as f:
+        with open("/opt/nginx-ldap-auth/nginx.ldap.auth.groups.yaml") as f:
             groupInfo = yaml.load(f)
         pattern = re.compile(r"\s{2,}")
         for group, userLists in groupInfo.items():
@@ -270,7 +274,7 @@ class UserValidator():
                 self.groups[group] += userList.split(" ")
 
     def valid(self, group, user):
-    return self.groups.has_key(group) and user in self.groups[group] 
+        return self.groups.has_key(group) and user in self.groups[group] 
 
 
 if __name__ == '__main__':
@@ -305,9 +309,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    userValidator = UserValidator()
-    userValidator.set_UserValidator(userValidator)
-
     global Listen 
     Listen = (args.host, args.port)
     auth_params = {
@@ -320,6 +321,7 @@ if __name__ == '__main__':
              'cookiename': ('X-CookieName', args.cookie)
     }
     LDAPAuthHandler.set_params(auth_params)
+    LDAPAuthHandler.set_UserValidator(UserValidator())
     server = AuthHTTPServer(Listen, LDAPAuthHandler)
     signal.signal(signal.SIGINT, exit_handler)
     server.serve_forever()
