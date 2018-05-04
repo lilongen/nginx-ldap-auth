@@ -1,0 +1,8 @@
+    # The back-end daemon listens on port 9000 as implemented
+    # in backend-sample-app.py.
+    # Change the IP address if the daemon is not running on the
+    # same host as NGINX/NGINX Plus.
+    upstream backend {
+        server 127.0.0.1:12000;
+    }
+
