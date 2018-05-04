@@ -1,3 +1,5 @@
+# forked from https://github.com/nginxinc/nginx-ldap-auth, add special group and memeber verfication support
+
 # nginx-ldap-auth
 
 Reference implementation of method for authenticating users on behalf of servers proxied by NGINX or NGINX Plus
