@@ -1,15 +1,13 @@
-g.datav.tagging: 
-  g2: lrz taih dingj wangsha ztf Allanwang wangrn lzq cjj liuyf zhangj 
-  g1: lile wangjd luoyw baosy liukl tangzx maocy wangxt jingwz
+group:
+  super: lile, wangrn, zhangj
+  data: lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, jingwz
+  patner: lrz, taih, dingj, wangsha, ztf, Allanwang, wangrn, lzq, cjj, liuyf, zhangj
 
-g.vc.datav.skyeye: 
-  g1: lrz taih dingj wangsha ztf Allanwang wangrn lzq cjj liuyf zhangj 
-  g2: lile wangjd luoyw baosy liukl tangzx maocy wangxt jingwz
+x-ldap-group:
+  datav.tagging: 
+    - g(super, data, patner)
+    - u(lile, abc)
 
-g.0: 
-  g1: 1  2  3   
-  g2:    4 5      6 
-
-g.1:
-  g1: lile liukl 
-  g2: tangzx     
+  datav.skyeye: 
+    - g(super, data)
+    - u(lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, jingwz)

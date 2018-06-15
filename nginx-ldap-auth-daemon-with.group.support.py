@@ -260,21 +260,39 @@ def exit_handler(signal, frame):
 
 class UserValidator():
     def __init__(self):
-        self.groups = {}
         with open("/opt/nginx-ldap-auth/nginx.ldap.auth.groups.yaml") as f:
-            groupInfo = yaml.load(f)
-        pattern = re.compile(r"\s{2,}")
-        for group, userLists in groupInfo.items():
-            if not self.groups.has_key(group):
-                self.groups[group] = [];
-                
-            for group2, userList in userLists.items():
-                userList = userList.strip()
-                userList = re.sub(pattern, " ", userList)
-                self.groups[group] += userList.split(" ")
+            info = yaml.load(f)
+        redelimeter = re.compile(r",\s*")
+
+        userGroups = {}
+        xldapGroups = {}
+
+        for group, userList in info['group'].items():
+            userGroups[group] = re.split(redelimeter, userList.strip())
+        
+        for group, guList in info['x-ldap-group']:
+            node = xldapGroups[group] = {}
+            node['g'] = []
+            node['u'] = []
+            for item in guList:
+                item = item.strip()
+                # g(super, data)
+                # u(lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, jingwz)
+                node[item[0:1]] += re.split(redelimeter, item[2:-1])
+
+        self.userGroups = userGroups
+        self.xldapGroups = xldapGroups
+
+
 
     def valid(self, group, user):
-        return self.groups.has_key(group) and user in self.groups[group] 
+        if not group in self.xldapGroups:
+            return False
+
+        return user in self.xldapGroups[group]['u'] 
+            and any([user in self.userGroups[group] for group in xldapGroups[group]['g']])
+
+
 
 
 if __name__ == '__main__':
