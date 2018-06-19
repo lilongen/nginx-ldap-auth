@@ -7,20 +7,20 @@ import pprint
 class AuthzValidator():
     def __init__(self):
         def getYamlFile():
-            return os.path.dirname(os.path.realpath(__file__)) + '/nginx.ldap.auth.groups.yaml'
+            return os.path.dirname(os.path.realpath(__file__)) + '/nla.groups.yaml'
 
         with open(getYamlFile()) as f: 
             info = yaml.load(f)
         redelimeter = re.compile(r',\s*')
 
         userGroups = {}
-        xldapGroups = {}
+        nlaGroups = {}
 
         for group, userList in info['group'].items():
             userGroups[group] = re.split(redelimeter, userList.strip())
         
         for group, guList in info['x-ldap-group'].items():
-            node = xldapGroups[group] = {}
+            node = nlaGroups[group] = {}
             node['g'] = []
             node['u'] = []
             for item in guList:
@@ -30,11 +30,11 @@ class AuthzValidator():
                 node[item[0:1]] += re.split(redelimeter, item[2:])
 
         self.userGroups = userGroups
-        self.xldapGroups = xldapGroups
+        self.nlaGroups = nlaGroups
 
     def __str__(self):
         pp = pprint.PrettyPrinter(indent=4)
-        return 'usergroups: %s \n\nxldapgroups: %s\n' % (pp.pformat(self.userGroups), pp.pformat(self.xldapGroups))
+        return 'usergroups: %s \n\nnlaGroups: %s\n' % (pp.pformat(self.userGroups), pp.pformat(self.nlaGroups))
 
 
     def valid(self, group, user):
@@ -42,11 +42,11 @@ class AuthzValidator():
             return True
         if user in self.userGroups['super']:
             return True
-        if not group in self.xldapGroups:
+        if not group in self.nlaGroups:
             return False
-        if user in self.xldapGroups[group]['u']:
+        if user in self.nlaGroups[group]['u']:
             return True
-        for g in self.xldapGroups[group]['g']:
+        for g in self.nlaGroups[group]['g']:
             if user in self.userGroups[g]:
                 return True
         return False
