@@ -53,10 +53,20 @@ class AuthzValidator():
 
 
 if __name__ == '__main__':
+    validGroups = ['datav.tagging', 'datav.skyeye', 'datav.dashboard']
+    invalidGroups = ['invalid.tagging', 'invalid.skyeye', '']
+    users = ['lile', 'jenkins']
+    
+    def getTestset(groups, users):
+        testset = []
+        for g in groups:
+            for u in users:
+                testset.append((g, u))
+        return testset
+
     authzvalidator = AuthzValidator()
     print(str(authzvalidator))
-    test_set = (('datav.tagging', 'lile'), ('datav.tagging', 'jenkins'), ('', 'lile'), ('', 'jenkins'))
     print("do validating test ... ")
-    for gn in test_set:
-        print('. validate {}: {}'.format(str(gn), authzvalidator.valid(gn[0], gn[1])))
+    for g, u in getTestset(validGroups + invalidGroups, users):
+        print('validate {} - {}: {}'.format(g, u, authzvalidator.valid(g, u)))
 
