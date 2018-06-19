@@ -68,5 +68,5 @@ if __name__ == '__main__':
     print(str(authzvalidator))
     print("do validating test ... ")
     for g, u in getTestset(validGroups + invalidGroups, users):
-        print('validate {} - {}: {}'.format(g, u, authzvalidator.valid(g, u)))
+        print('valid({}, {}) : {}'.format(g, u, authzvalidator.valid(g, u)))
 
