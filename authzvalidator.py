@@ -9,7 +9,8 @@ class AuthzValidator():
         def getYamlFile():
             return os.path.dirname(os.path.realpath(__file__)) + '/nginx.ldap.auth.groups.yaml'
 
-        with open(getYamlFile()) as f: info = yaml.load(f)
+        with open(getYamlFile()) as f: 
+            info = yaml.load(f)
         redelimeter = re.compile(r',\s*')
 
         userGroups = {}
@@ -38,6 +39,8 @@ class AuthzValidator():
 
     def valid(self, group, user):
         if group == '':
+            return True
+        if user in self.userGroups['super']
             return True
         if not group in self.xldapGroups:
             return False

@@ -6,7 +6,10 @@
 
 import sys, os, signal, base64, ldap, Cookie, argparse
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-import authzvalidator
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from authzvalidator import AuthzValidator
+
 
 #Listen = ('localhost', 12008)
 #Listen = "/tmp/auth.sock"    # Also uncomment lines in 'Requests are

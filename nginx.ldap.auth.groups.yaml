@@ -4,11 +4,11 @@ group:
   patner: lrz, taih, dingj, wangsha, ztf, Allanwang, wangrn, lzq, cjj, liuyf, zhangj
 
 x-ldap-group:
-  datav.tagging: 
-    - g;super, data, patner
-    - u;lile, abc
-
   datav.skyeye: 
-    - g;super, data
-    - u;lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, jingwz
+    - g;data, patner
+
+  datav.navigator: 
+    - g;data, patner
     
+  datav.dashboard: 
+    - g;data, patner
