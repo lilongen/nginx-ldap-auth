@@ -6,9 +6,8 @@
 
 import sys, os, signal, base64, ldap, Cookie, argparse
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+import authzvalidator
 
-import yaml
-import re;
 #Listen = ('localhost', 12008)
 #Listen = "/tmp/auth.sock"    # Also uncomment lines in 'Requests are
                               # processed with UNIX sockets' section below
@@ -38,8 +37,8 @@ class AuthHandler(BaseHTTPRequestHandler):
 
 
     @classmethod
-    def set_UserValidator(self, userValidator):
-        self.userValidator = userValidator
+    def set_authzvalidator(self, authzvalidator):
+        self.authzvalidator = authzvalidator
 
     # Return True if request is processed and response sent, otherwise False
     # Set ctx['user'] and ctx['pass'] for authentication
@@ -92,7 +91,7 @@ class AuthHandler(BaseHTTPRequestHandler):
         if x_auth_group == '':
             pass
         else:
-            if not self.userValidator.valid(x_auth_group, ctx['user']):
+            if not self.authzvalidator.valid(x_auth_group, ctx['user']):
                 self.auth_failed(ctx, 'X-LDAP-GROUP/user invalid!')
                 return True
 
@@ -258,43 +257,6 @@ def exit_handler(signal, frame):
     sys.exit(0)
 
 
-class UserValidator():
-    def __init__(self):
-        with open("/opt/nginx-ldap-auth/nginx.ldap.auth.groups.yaml") as f:
-            info = yaml.load(f)
-        redelimeter = re.compile(r",\s*")
-
-        userGroups = {}
-        xldapGroups = {}
-
-        for group, userList in info['group'].items():
-            userGroups[group] = re.split(redelimeter, userList.strip())
-        
-        for group, guList in info['x-ldap-group']:
-            node = xldapGroups[group] = {}
-            node['g'] = []
-            node['u'] = []
-            for item in guList:
-                item = item.strip()
-                # g(super, data)
-                # u(lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, jingwz)
-                node[item[0:1]] += re.split(redelimeter, item[2:-1])
-
-        self.userGroups = userGroups
-        self.xldapGroups = xldapGroups
-
-
-
-    def valid(self, group, user):
-        if not group in self.xldapGroups:
-            return False
-
-        return user in self.xldapGroups[group]['u'] 
-            and any([user in self.userGroups[group] for group in xldapGroups[group]['g']])
-
-
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="""Simple Nginx LDAP authentication helper.""")
@@ -339,7 +301,7 @@ if __name__ == '__main__':
              'cookiename': ('X-CookieName', args.cookie)
     }
     LDAPAuthHandler.set_params(auth_params)
-    LDAPAuthHandler.set_UserValidator(UserValidator())
+    LDAPAuthHandler.set_authzvalidator(AuthzValidator())
     server = AuthHTTPServer(Listen, LDAPAuthHandler)
     signal.signal(signal.SIGINT, exit_handler)
     server.serve_forever()
