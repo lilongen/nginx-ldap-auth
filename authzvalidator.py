@@ -11,7 +11,7 @@ class AuthzValidator():
 
         with open(getYamlFile()) as f: 
             info = yaml.load(f)
-        redelimeter = re.compile(r',\s*')
+        redelimeter = re.compile(r'\s*,\s*')
 
         userGroups = {}
         nlaGroups = {}
@@ -31,6 +31,7 @@ class AuthzValidator():
 
         self.userGroups = userGroups
         self.nlaGroups = nlaGroups
+
 
     def __str__(self):
         pp = pprint.PrettyPrinter(indent=4)
