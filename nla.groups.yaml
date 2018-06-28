@@ -1,6 +1,6 @@
 group:
   super: lile, wangrn, zhangj, czg
-  data: lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, jingwz, yujun, liuzl, wanglj, guoqp, liuc
+  data: lile, wangjd, luoyw, baosy, liukl, tangzx, maocy, wangxt, xuxt, jingwz, yujun, liuzl, wanglj, guoqp, liuc
   partner: lrz, taih, dingj, wangsha, ztf, Allanwang, wangrn, lzq, cjj, liuyf, zhangj
 
 x-ldap-group:
